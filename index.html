@@ -38,8 +38,6 @@ mark{background:#fff0b8;border-radius:2px;padding:0 1px;color:inherit}
 .sort{font-size:10px;color:#9ba7b1;margin-left:4px}.active-sort{color:#336c96}
 .blank{color:#b4bdc5}
 .message{padding:36px 18px;text-align:center;color:#667788;font-size:13px;white-space:pre-line}
-.more{width:100%;border:0;background:#fafcfd;border-top:1px solid var(--line);height:48px;color:#376a8d;font-weight:600}
-.more:hover{background:#f0f6fb}
 .fallback{display:none;background:#fff9ef;border:1px solid #ead7b4;border-radius:7px;padding:14px 16px;margin-bottom:16px}
 .fallback.show{display:block}.fallback p{margin:3px 0 12px;color:#796b51;font-size:12px}.fallback .plainbtn{background:#fff}
 footer{margin-top:12px;color:#8895a1;font-size:11px}
@@ -77,7 +75,6 @@ footer{margin-top:12px;color:#8895a1;font-size:11px}
     <colgroup><col class="page"><col class="subject"><col class="contents"><col class="episode"><col class="category"><col class="note"><col class="created"><col class="action"></colgroup>
     <thead><tr id="thead"></tr></thead><tbody id="tbody"><tr><td colspan="8" class="message">データを読み込み中…</td></tr></tbody>
   </table></div>
-  <button type="button" id="more" class="more" hidden>さらに表示</button>
 </section>
 <footer>同じフォルダの「目次データ.csv」を自動読み込みします。HTMLを直接開く場合は「目次データ.js」を使用します。検索処理はブラウザ内で行われます。</footer>
 </main>
@@ -266,26 +263,25 @@ function readCsv(buffer){
 
 const AUTO_FILES=['目次データ.csv','目次データ.xlsx'];
 const FIELDS=['ページ','対象・小項目','掲載内容','話数','カテゴリ','特記事項','作成日（原文）','処理事項'];
-const state={rows:[],matches:[],count:100,sort:'ページ',asc:true};
+const state={rows:[],matches:[],sort:'ページ',asc:true};
 const autoPack=window.EVA_INDEX_DATA;
 function text(v){return str(v)}
 function setStatus(value,mode){$('sourceLabel').textContent=value;$('sourceDot').className='dot '+(mode||'')}
 function showManual(reason){setStatus('データ未読込','bad');$('fallback').classList.add('show');$('fallbackText').textContent=reason;$('tbody').replaceChildren(emptyRow('データファイルを選択してください。'));}
 function emptyRow(label){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=8;td.className='message';td.textContent=label;tr.append(td);return tr}
 function usePack(pack){if(!pack||!Array.isArray(pack.headers)||!Array.isArray(pack.rows))throw Error('データファイルの形式が正しくありません。');const matrix=[pack.headers,...pack.rows];const header=detectHeader(matrix);if(!header)throw Error('検索対象の見出し行が見つかりません。');return rowsFromMatrix(matrix,header)}
-function initializeRows(rows,source){if(!rows.length)throw Error('データ行がありません。');state.rows=rows;state.sort='ページ';state.asc=true;state.count=100;$('fallback').classList.remove('show');setStatus('読込済み：'+source+' ／ '+nfmt(rows.length)+'件','good');fillSelect('category','カテゴリ');fillSelect('work','作品区分');refresh()}
+function initializeRows(rows,source){if(!rows.length)throw Error('データ行がありません。');state.rows=rows;state.sort='ページ';state.asc=true;$('fallback').classList.remove('show');setStatus('読込済み：'+source+' ／ '+nfmt(rows.length)+'件','good');fillSelect('category','カテゴリ');fillSelect('work','作品区分');refresh()}
 function fillSelect(id,key){const sel=$(id),prev=sel.value;sel.replaceChildren(new Option('すべて',''));const values=[...new Set(state.rows.map(row=>row[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));values.forEach(x=>sel.add(new Option(x,x)));if(values.includes(prev))sel.value=prev}
 function compact(s){return normalize(s).replace(/\s/g,'')}
 function search(){const terms=normalize($('keyword').value).split(/[\s　]+/).filter(Boolean),field=$('field').value,cat=$('category').value,work=$('work').value;const keys=field==='ALL'?SEARCH_FIELDS:[field];state.matches=state.rows.filter(r=>{if(cat&&r['カテゴリ']!==cat)return false;if(work&&r['作品区分']!==work)return false;const blob=keys.map(k=>normalize(r[k])).join(' ');return terms.every(t=>blob.includes(t))});state.matches.sort(compare)}
 function compare(a,b){const av=text(a[state.sort]),bv=text(b[state.sort]);if(!av!==!bv)return av? -1:1;let result;if(state.sort==='ページ'||state.sort==='話数'){const num=s=>{const m=s.match(/\d+/);return m?Number(m[0]):NaN},na=num(av),nb=num(bv);result=!Number.isNaN(na)&&!Number.isNaN(nb)?na-nb:av.localeCompare(bv,'ja',{numeric:true})}else result=av.localeCompare(bv,'ja',{numeric:true});return (state.asc?result:-result)||(a._order-b._order)}
 function highlight(td,value,field){if(!value){td.textContent='—';td.classList.add('blank');return}const selected=$('field').value,terms=normalize($('keyword').value).split(/[\s　]+/).filter(Boolean);if(!terms.length||(selected!=='ALL'&&selected!==field)){td.textContent=value;return}const escaped=terms.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));const re=new RegExp('('+escaped.join('|')+')','ig');let last=0;for(const match of value.matchAll(re)){const i=match.index;if(i<last)continue;td.append(document.createTextNode(value.slice(last,i)));const m=document.createElement('mark');m.textContent=match[0];td.append(m);last=i+match[0].length}td.append(document.createTextNode(value.slice(last)))}
 function drawHeader(){const tr=$('thead');tr.replaceChildren();FIELDS.forEach(key=>{const th=document.createElement('th');th.tabIndex=0;th.title='クリックして並べ替え';th.setAttribute('aria-sort',state.sort===key?(state.asc?'ascending':'descending'):'none');th.append(document.createTextNode(key));const sort=document.createElement('span');sort.className='sort '+(state.sort===key?'active-sort':'');sort.textContent=state.sort===key?(state.asc?'▲':'▼'):'↕';th.append(sort);th.addEventListener('click',()=>sortBy(key));th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sortBy(key)}});tr.append(th)})}
-function drawRows(){const target=$('tbody');target.replaceChildren();if(!state.rows.length){target.append(emptyRow('データを読み込んでいません。'));$('more').hidden=true;return}if(!state.matches.length){target.append(emptyRow('検索条件に一致する項目はありません。'));$('more').hidden=true;return}const frag=document.createDocumentFragment();for(const r of state.matches.slice(0,state.count)){const tr=document.createElement('tr');FIELDS.forEach(key=>{const td=document.createElement('td');highlight(td,r[key],key);tr.append(td)});frag.append(tr)}target.append(frag);$('more').hidden=state.matches.length<=state.count;$('more').textContent='さらに表示（'+nfmt(Math.min(100,state.matches.length-state.count))+'件）'}
+function drawRows(){const target=$('tbody');target.replaceChildren();if(!state.rows.length){target.append(emptyRow('データを読み込んでいません。'));return}if(!state.matches.length){target.append(emptyRow('検索条件に一致する項目はありません。'));return}const frag=document.createDocumentFragment();for(const r of state.matches){const tr=document.createElement('tr');FIELDS.forEach(key=>{const td=document.createElement('td');highlight(td,r[key],key);tr.append(td)});frag.append(tr)}target.append(frag)}
 function refresh(){if(!state.rows.length)return;search();$('hit').textContent=nfmt(state.matches.length);$('total').textContent='/ '+nfmt(state.rows.length)+' 件';drawHeader();drawRows()}
 function sortBy(key){if(state.sort===key)state.asc=!state.asc;else{state.sort=key;state.asc=true}refresh()}
-for(const id of ['keyword','field','category','work'])$(id).addEventListener(id==='keyword'?'input':'change',()=>{state.count=100;refresh()});
-$('reset').addEventListener('click',()=>{$('keyword').value='';$('field').value='ALL';$('category').value='';$('work').value='';state.count=100;refresh()});
-$('more').addEventListener('click',()=>{state.count+=100;drawRows()});
+for(const id of ['keyword','field','category','work'])$(id).addEventListener(id==='keyword'?'input':'change',()=>refresh());
+$('reset').addEventListener('click',()=>{$('keyword').value='';$('field').value='ALL';$('category').value='';$('work').value='';refresh()});
 $('chooseFile').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{setStatus('読み込み中：'+file.name,'');const buf=await file.arrayBuffer(),data=file.name.toLowerCase().endsWith('.xlsx')?await readXlsx(buf):readCsv(buf);initializeRows(data.rows,file.name)}catch(err){showManual('読み込みに失敗しました：'+err.message)}finally{e.target.value=''}});
 async function autoLoad(){
