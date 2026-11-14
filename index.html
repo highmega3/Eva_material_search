@@ -10,7 +10,9 @@
 body{font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif;margin:0;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.55}
 button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}
 .container{max-width:1510px;margin:0 auto;padding:28px clamp(14px,3.2vw,42px) 48px}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px 28px;flex-wrap:wrap;margin-bottom:22px}
+.bibliography{margin-left:auto;max-width:610px;color:var(--muted);font-size:11px;line-height:1.7;text-align:left}
+.bibliography div{overflow-wrap:anywhere}
 h1{font-size:22px;letter-spacing:.01em;font-weight:700;margin:0}header p{margin:3px 0 0;color:var(--muted);font-size:12px}
 .source{color:var(--muted);font-size:12px;margin:0 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dot{width:8px;height:8px;background:#adb5bd;border-radius:50%;display:inline-block;flex-shrink:0}.dot.good{background:#55a476}.dot.bad{background:#d79b51}
@@ -41,12 +43,21 @@ mark{background:#fff0b8;border-radius:2px;padding:0 1px;color:inherit}
 .fallback{display:none;background:#fff9ef;border:1px solid #ead7b4;border-radius:7px;padding:14px 16px;margin-bottom:16px}
 .fallback.show{display:block}.fallback p{margin:3px 0 12px;color:#796b51;font-size:12px}.fallback .plainbtn{background:#fff}
 footer{margin-top:12px;color:#8895a1;font-size:11px}
-@media(max-width:680px){.container{padding:18px 12px 32px}header h1{font-size:20px}.top-controls{grid-template-columns:1fr}.filter-control{width:calc(50% - 6px);min-width:145px}.filters .plainbtn{width:100%}.scroll{max-height:70vh}}
+@media(max-width:680px){.container{padding:18px 12px 32px}header h1{font-size:20px}.bibliography{margin-left:0;text-align:left;font-size:10px}.top-controls{grid-template-columns:1fr}.filter-control{width:calc(50% - 6px);min-width:145px}.filters .plainbtn{width:100%}.scroll{max-height:70vh}}
 </style>
 </head>
 <body>
 <main class="container">
-<header><div><h1>設定資料集 目次検索</h1><p>エヴァンゲリオン TV版・劇場版 設定資料集</p></div></header>
+<header>
+  <div><h1>設定資料集 目次検索</h1><p>新世紀エヴァンゲリオンTVアニメーション設定資料集</p></div>
+  <div class="bibliography" aria-label="引用書籍・権利表記">
+    <div>引用書籍：新世紀エヴァンゲリオンTVアニメーション設定資料集 EVANGELION 30th edition</div>
+    <div>権利表記 ：(c)カラー／Project Eva. (c)カラー／EVA製作委員会</div>
+    <div>発行・販売元：株式会社グラウンドワークス</div>
+    <div>発売年月日：2026年10月4日</div>
+    <div>ISBN：978-4-90946614-3</div>
+  </div>
+</header>
 <div class="source"><span id="sourceDot" class="dot"></span><span id="sourceLabel" aria-live="polite">データファイルを確認しています…</span></div>
 <div id="fallback" class="fallback"><strong>データファイルを読み込めませんでした</strong><p id="fallbackText">ファイルを手動で指定してください。</p><button id="chooseFile" type="button" class="plainbtn">Excel / CSVを選択</button><input id="fileInput" type="file" accept=".xlsx,.csv,.tsv" hidden></div>
 <section class="controls" aria-label="検索条件">
