@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>設定資料集｜目次検索</title>
+<style>
+:root{color-scheme:light;--line:#dfe4e9;--ink:#25313c;--muted:#617080;--accent:#386b91;--bg:#f7f9fb}
+*{box-sizing:border-box}
+body{font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif;margin:0;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.55}
+button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}
+.container{max-width:1510px;margin:0 auto;padding:28px clamp(14px,3.2vw,42px) 48px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+h1{font-size:22px;letter-spacing:.01em;font-weight:700;margin:0}header p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.source{color:var(--muted);font-size:12px;margin:0 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dot{width:8px;height:8px;background:#adb5bd;border-radius:50%;display:inline-block;flex-shrink:0}.dot.good{background:#55a476}.dot.bad{background:#d79b51}
+.controls{background:white;border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:17px}
+.top-controls{display:grid;grid-template-columns:minmax(230px,1fr) 245px;gap:12px;margin-bottom:13px}
+.filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.control{display:flex;flex-direction:column;gap:6px}.control label{font-size:12px;color:#536575;font-weight:600}
+.control input,.control select{height:39px;width:100%;padding:0 11px;border:1px solid #cbd4dc;border-radius:5px;background:white;color:var(--ink);outline:none}
+.control input:focus,.control select:focus{border-color:#5284ad;box-shadow:0 0 0 3px #5b91b81b}
+.control input::placeholder{color:#93a0ac}
+.filter-control{width:220px}.plainbtn{background:white;border:1px solid #ccd5dd;border-radius:5px;height:39px;padding:0 13px;color:var(--ink)}.plainbtn:hover{background:#f2f6fa}
+.summary{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px;color:var(--muted);font-size:12px}
+.summary strong{color:#1f3546;font-weight:700;font-size:15px}
+.table-box{background:white;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.scroll{width:100%;overflow:auto;max-height:calc(100vh - 310px);min-height:250px}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:1190px;table-layout:fixed}
+col.page{width:60px}col.subject{width:170px}col.contents{width:285px}col.episode{width:66px}col.category{width:100px}col.note{width:270px}col.created{width:130px}col.action{width:135px}
+th{position:sticky;top:0;z-index:1;background:#f0f3f6;color:#445463;font-size:12px;font-weight:650;text-align:left;padding:11px 10px;border-bottom:1px solid #d8e0e6;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#e7edf2}td{padding:11px 10px;border-bottom:1px solid #edf0f3;vertical-align:top;white-space:pre-line;overflow-wrap:anywhere;color:#34424e}
+tr:last-child td{border-bottom:0}tbody tr:hover td{background:#f8fbfe}
+td:first-child{font-variant-numeric:tabular-nums;color:#4b677d}td:nth-child(4){font-variant-numeric:tabular-nums}
+mark{background:#fff0b8;border-radius:2px;padding:0 1px;color:inherit}
+.sort{font-size:10px;color:#9ba7b1;margin-left:4px}.active-sort{color:#336c96}
+.blank{color:#b4bdc5}
+.message{padding:36px 18px;text-align:center;color:#667788;font-size:13px;white-space:pre-line}
+.more{width:100%;border:0;background:#fafcfd;border-top:1px solid var(--line);height:48px;color:#376a8d;font-weight:600}
+.more:hover{background:#f0f6fb}
+.fallback{display:none;background:#fff9ef;border:1px solid #ead7b4;border-radius:7px;padding:14px 16px;margin-bottom:16px}
+.fallback.show{display:block}.fallback p{margin:3px 0 12px;color:#796b51;font-size:12px}.fallback .plainbtn{background:#fff}
+footer{margin-top:12px;color:#8895a1;font-size:11px}
+@media(max-width:680px){.container{padding:18px 12px 32px}header h1{font-size:20px}.top-controls{grid-template-columns:1fr}.filter-control{width:calc(50% - 6px);min-width:145px}.filters .plainbtn{width:100%}.scroll{max-height:70vh}}
+</style>
+</head>
+<body>
+<main class="container">
+<header><div><h1>設定資料集 目次検索</h1><p>エヴァンゲリオン TV版・劇場版 設定資料集</p></div></header>
+<div class="source"><span id="sourceDot" class="dot"></span><span id="sourceLabel" aria-live="polite">データファイルを確認しています…</span></div>
+<div id="fallback" class="fallback"><strong>データファイルを読み込めませんでした</strong><p id="fallbackText">ファイルを手動で指定してください。</p><button id="chooseFile" type="button" class="plainbtn">Excel / CSVを選択</button><input id="fileInput" type="file" accept=".xlsx,.csv,.tsv" hidden></div>
+<section class="controls" aria-label="検索条件">
+  <div class="top-controls">
+    <div class="control"><label for="keyword">キーワード検索</label><input id="keyword" type="search" placeholder="キーワードを入力するとすぐに検索" autocomplete="off" spellcheck="false"></div>
+    <div class="control"><label for="field">検索対象</label><select id="field"><option value="ALL">すべての項目</option><option value="対象・小項目">対象・小項目</option><option value="掲載内容">掲載内容</option><option value="話数">話数</option><option value="特記事項">特記事項</option><option value="作成日（原文）">作成日（原文）</option><option value="処理事項">処理事項</option></select></div>
+  </div>
+  <div class="filters">
+    <div class="control filter-control"><label for="category">カテゴリ</label><select id="category"><option value="">すべて</option></select></div>
+    <div class="control filter-control"><label for="work">作品区分</label><select id="work"><option value="">すべて</option></select></div>
+    <button type="button" class="plainbtn" id="reset">検索条件をクリア</button>
+  </div>
+</section>
+<div class="summary"><div><strong id="hit">0</strong> 件 <span id="total">/ 0 件</span></div><span>見出しをクリックすると並べ替えできます</span></div>
+<section class="table-box" aria-label="検索結果">
+  <div class="scroll" id="scroll"><table>
+    <colgroup><col class="page"><col class="subject"><col class="contents"><col class="episode"><col class="category"><col class="note"><col class="created"><col class="action"></colgroup>
+    <thead><tr id="thead"></tr></thead><tbody id="tbody"><tr><td colspan="8" class="message">データを読み込み中…</td></tr></tbody>
+  </table></div>
+  <button type="button" id="more" class="more" hidden>さらに表示</button>
+</section>
+<footer>同じフォルダの「目次データ.csv」を自動読み込みします。HTMLを直接開く場合は「目次データ.js」を使用します。検索処理はブラウザ内で行われます。</footer>
+</main>
+<!-- file:// 環境でも自動的に読み込めるデータ。CSV編集後は付属の起動バッチで更新可能。 -->
+<script src="目次データ.js"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const nfmt=n=>new Intl.NumberFormat('ja-JP').format(n);
+const COLUMNS = ['ページ','作品区分','大項目','カテゴリ','対象・小項目','掲載内容','話数','話数順','特記事項','作成日（原文）','処理事項'];
+const SEARCH_FIELDS = ['対象・小項目','掲載内容','話数','特記事項','作成日（原文）','処理事項'];
+const VISIBLE_COLUMNS = ['ページ','作品区分','カテゴリ','対象・小項目','掲載内容','話数','特記事項','作成日（原文）','処理事項'];
+
+
+
+const str = v => v == null ? '' : String(v).trim();
+const normalize = s => str(s).normalize('NFKC').toLocaleLowerCase('ja-JP');
+
+
+function normalizeHeader(s){return normalize(s).replace(/[\s\u3000・･\/／_\-－:：()（）\[\]【】]/g,'')}
+const HMAP=new Map(COLUMNS.map(k=>[normalizeHeader(k),k]));
+[['対象','対象・小項目'],['小項目','対象・小項目'],['キーワード','掲載内容'],['掲載項目','掲載内容'],['内容','掲載内容'],['話数番号','話数'],['日付','作成日（原文）'],['作成日','作成日（原文）'],['処理','処理事項'],['作品','作品区分'],['頁','ページ'],['page','ページ']].forEach(([a,b])=>HMAP.set(normalizeHeader(a),b));
+function headerFor(v){return HMAP.get(normalizeHeader(v))||null}
+function detectHeader(matrix){
+  let best=null;
+  for(let i=0;i<Math.min(matrix.length,45);i++){
+    const row=matrix[i]||[];const found=new Map();
+    row.forEach((item,col)=>{const field=headerFor(item);if(field&&!found.has(field))found.set(field,col)});
+    let score=found.size + (found.has('掲載内容')?2:0) + (found.has('対象・小項目')?2:0) + (found.has('ページ')?1:0);
+    if(!best||score>best.score)best={rowIndex:i,found,score};
+  }
+  return best && best.found.size>=2 && (best.found.has('掲載内容')||best.found.has('対象・小項目'))?best:null;
+}
+function rowsFromMatrix(matrix, header){
+  const results=[];
+  for(let i=header.rowIndex+1;i<matrix.length;i++){
+    const line=matrix[i]||[];const obj={};for(const k of COLUMNS)obj[k]=str(line[header.found.get(k)]);
+    if(!COLUMNS.some(k=>obj[k]))continue;
+    // 旧形式の「キーワード」に含まれる #話数 を検索用の話数列にも補完。
+    // 原文の掲載内容は変更しない。整理版に話数列がある場合は補完しない。
+    if(!header.found.has('話数') && obj['掲載内容']){
+      const nums=Array.from(obj['掲載内容'].matchAll(/(?:新\s*)?#\s*(\d{1,3})(?:\s*[-–~〜～]\s*(\d{1,3}))?([～〜~])?/g));
+      if(nums.length){
+        obj['話数']=nums.map(m=>m[1]+(m[2]?'–'+m[2]:'')+(m[3]?'～':'')).join('／');
+        obj['話数順']=nums[0][1];
+      }
+    }
+    obj._sourceRow=i+1;obj._order=results.length;
+    results.push(obj);
+  }
+  return results;
+}
+function safeXml(raw,path){
+  const parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(raw),'application/xml');
+  if(parsed.getElementsByTagName('parsererror').length)throw new Error('ExcelのXMLを解析できません: '+path);
+  return parsed;
+}
+function descend(element,name){return Array.from(element.children).find(el=>el.localName===name)||null}
+function descendants(element,name){return Array.from(element.getElementsByTagName('*')).filter(el=>el.localName===name)}
+function cellRefColumn(ref){let n=0;for(const c of ref.toUpperCase()){if(c<'A'||c>'Z')break;n=n*26+c.charCodeAt(0)-64}return n-1}
+function parseZip(arrayBuffer){
+  const bytes=new Uint8Array(arrayBuffer),d=new DataView(arrayBuffer),dec=new TextDecoder('utf-8');
+  let eocd=-1;
+  for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--){if(d.getUint32(i,true)===0x06054b50){eocd=i;break}}
+  if(eocd<0)throw new Error('有効なExcel（.xlsx）ファイルではありません。');
+  const count=d.getUint16(eocd+10,true),start=d.getUint32(eocd+16,true);
+  if(count===0xffff||start===0xffffffff)throw new Error('ZIP64形式は未対応です。CSV形式で読み込んでください。');
+  let at=start;const files=new Map();
+  for(let k=0;k<count;k++){
+    if(at+46>bytes.length||d.getUint32(at,true)!==0x02014b50)throw new Error('ExcelファイルのZIP構造が破損しています。');
+    const method=d.getUint16(at+10,true),compressed=d.getUint32(at+20,true),nameLen=d.getUint16(at+28,true),extraLen=d.getUint16(at+30,true),commentLen=d.getUint16(at+32,true),localOffset=d.getUint32(at+42,true);
+    const name=dec.decode(bytes.subarray(at+46,at+46+nameLen)).replace(/\\/g,'/').replace(/^\//,'');
+    files.set(name,{method,compressed,localOffset});at+=46+nameLen+extraLen+commentLen;
+  }
+  async function get(name){
+    const entry=files.get(name);
+    if(!entry)return null;
+    let at=entry.localOffset;
+    if(d.getUint32(at,true)!==0x04034b50)throw new Error('ZIPのファイル情報が破損しています: '+name);
+    const from=at+30+d.getUint16(at+26,true)+d.getUint16(at+28,true),to=from+entry.compressed;
+    if(to>bytes.length)throw new Error('Excelの圧縮データが不完全です。');
+    const slice=bytes.slice(from,to);
+    if(entry.method===0)return slice;
+    if(entry.method!==8)throw new Error('このExcelファイルの圧縮方式には対応していません。');
+    if(!('DecompressionStream' in window))throw new Error('ブラウザがExcel展開に対応していません。最新版のChrome・Edge・Firefoxをご利用ください。');
+    try{
+      const decompressed=new Blob([slice]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return new Uint8Array(await new Response(decompressed).arrayBuffer());
+    }catch(e){throw new Error('Excelを展開できませんでした。CSV形式での読込もお試しください。\n'+e.message)}
+  }
+  return {get,files};
+}
+function parseSharedStrings(xml){
+  const list=[];
+  for(const si of descendants(xml,'si')){
+    list.push(descendants(si,'t').map(t=>t.textContent||'').join(''));
+  }
+  return list;
+}
+function sheetMatrix(xml,shared){
+  const matrix=[];
+  let sequentialRow=0;
+  for(const row of descendants(xml,'row')){
+    const rid=Number(row.getAttribute('r'))||sequentialRow+1;
+    if(rid>200000)throw new Error('行数が多すぎるExcelファイルです。');
+    const values=[];let autoCol=0;
+    for(const cell of Array.from(row.children).filter(n=>n.localName==='c')){
+      const col=cell.hasAttribute('r')?cellRefColumn(cell.getAttribute('r')):autoCol;
+      autoCol=col+1;
+      if(col<0||col>2000)continue;
+      const kind=cell.getAttribute('t');let v='';
+      if(kind==='inlineStr')v=descendants(cell,'t').map(t=>t.textContent||'').join('');
+      else{
+        const node=descend(cell,'v');v=node?node.textContent||'':'';
+        if(kind==='s')v=shared[Number(v)]??'';
+        if(kind==='b')v=v==='1'?'TRUE':'FALSE';
+      }
+      values[col]=v;
+    }
+    matrix[rid-1]=values;sequentialRow=rid;
+  }
+  return matrix;
+}
+function relTarget(target){
+  return decodeURIComponent(new URL(target,'https://archive.invalid/xl/workbook.xml').pathname.substring(1));
+}
+async function readXlsx(buf){
+  const zip=parseZip(buf);
+  const wbBin=await zip.get('xl/workbook.xml');
+  if(!wbBin)throw new Error('Excelのブック情報が見つかりません。');
+  const wb=safeXml(wbBin,'workbook.xml');
+  const relBin=await zip.get('xl/_rels/workbook.xml.rels');
+  if(!relBin)throw new Error('Excelのシート構成を読み取れません。');
+  const rels=safeXml(relBin,'workbook.xml.rels');
+  const paths=new Map(descendants(rels,'Relationship').map(r=>[r.getAttribute('Id'),relTarget(r.getAttribute('Target')||'')]));
+  const sheetDefs=descendants(wb,'sheet').map(s=>({name:s.getAttribute('name'),rid:s.getAttribute('r:id')||s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id')}));
+  const strBin=await zip.get('xl/sharedStrings.xml');const shared=strBin?parseSharedStrings(safeXml(strBin,'sharedStrings.xml')):[];
+  let best=null;
+  for(const def of sheetDefs){
+    const path=paths.get(def.rid);if(!path)continue;
+    const xmlBin=await zip.get(path);if(!xmlBin)continue;
+    const matrix=sheetMatrix(safeXml(xmlBin,path),shared),header=detectHeader(matrix);
+    if(!header)continue;
+    const score=header.score+(def.name==='目次一覧'?100:0);
+    if(!best||score>best.score)best={name:def.name,matrix,header,score};
+    if(def.name==='目次一覧')break;
+  }
+  if(!best)throw new Error('検索用の見出し行が見つかりません。\n「対象・小項目」「掲載内容」「話数」などが列名にあるシートを用意してください。');
+  return {name:best.name,rows:rowsFromMatrix(best.matrix,best.header)};
+}
+function readTextFile(arrayBuffer){
+  const bytes=new Uint8Array(arrayBuffer);
+  if(bytes[0]===0xef&&bytes[1]===0xbb&&bytes[2]===0xbf)return new TextDecoder('utf-8').decode(bytes.subarray(3));
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch(_){return new TextDecoder('shift_jis').decode(bytes)}
+}
+function inferDelimiter(text){
+  let s='',inside=false;
+  for(let i=0;i<text.length&&i<5000;i++){
+    const c=text[i];if(c==='"'){if(inside&&text[i+1]==='"'){i++;continue}inside=!inside}
+    else if(!inside&&(c==='\n'||c==='\r'))break;
+    s+=c;
+  }
+  const chars=['\t',',',';'];
+  const counted=chars.map(c=>[c,s.split(c).length-1]);counted.sort((a,b)=>b[1]-a[1]);
+  return counted[0][1]?counted[0][0]:',';
+}
+function parseDelimited(text,delimiter){
+  const rows=[];let row=[],value='',quoted=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='"'){
+      if(quoted&&text[i+1]==='"'){value+='"';i++}
+      else quoted=!quoted;
+    }else if(ch===delimiter&&!quoted){row.push(value);value=''}
+    else if((ch==='\r'||ch==='\n')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(value);if(row.some(x=>x!==''))rows.push(row);row=[];value=''}
+    else value+=ch;
+  }
+  row.push(value);if(row.some(x=>x!==''))rows.push(row);
+  return rows;
+}
+function readCsv(buffer){
+  const text=readTextFile(buffer),delimiter=inferDelimiter(text),matrix=parseDelimited(text,delimiter),header=detectHeader(matrix);
+  if(!header)throw new Error('CSVの見出し行が見つかりません。\n必要な列名（「対象・小項目」「掲載内容」など）をご確認ください。');
+  return {name:'CSV / TSV',rows:rowsFromMatrix(matrix,header)};
+}
+
+const AUTO_FILES=['目次データ.csv','目次データ.xlsx'];
+const FIELDS=['ページ','対象・小項目','掲載内容','話数','カテゴリ','特記事項','作成日（原文）','処理事項'];
+const state={rows:[],matches:[],count:100,sort:'ページ',asc:true};
+const autoPack=window.EVA_INDEX_DATA;
+function text(v){return str(v)}
+function setStatus(value,mode){$('sourceLabel').textContent=value;$('sourceDot').className='dot '+(mode||'')}
+function showManual(reason){setStatus('データ未読込','bad');$('fallback').classList.add('show');$('fallbackText').textContent=reason;$('tbody').replaceChildren(emptyRow('データファイルを選択してください。'));}
+function emptyRow(label){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=8;td.className='message';td.textContent=label;tr.append(td);return tr}
+function usePack(pack){if(!pack||!Array.isArray(pack.headers)||!Array.isArray(pack.rows))throw Error('データファイルの形式が正しくありません。');const matrix=[pack.headers,...pack.rows];const header=detectHeader(matrix);if(!header)throw Error('検索対象の見出し行が見つかりません。');return rowsFromMatrix(matrix,header)}
+function initializeRows(rows,source){if(!rows.length)throw Error('データ行がありません。');state.rows=rows;state.sort='ページ';state.asc=true;state.count=100;$('fallback').classList.remove('show');setStatus('読込済み：'+source+' ／ '+nfmt(rows.length)+'件','good');fillSelect('category','カテゴリ');fillSelect('work','作品区分');refresh()}
+function fillSelect(id,key){const sel=$(id),prev=sel.value;sel.replaceChildren(new Option('すべて',''));const values=[...new Set(state.rows.map(row=>row[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));values.forEach(x=>sel.add(new Option(x,x)));if(values.includes(prev))sel.value=prev}
+function compact(s){return normalize(s).replace(/\s/g,'')}
+function search(){const terms=normalize($('keyword').value).split(/[\s　]+/).filter(Boolean),field=$('field').value,cat=$('category').value,work=$('work').value;const keys=field==='ALL'?SEARCH_FIELDS:[field];state.matches=state.rows.filter(r=>{if(cat&&r['カテゴリ']!==cat)return false;if(work&&r['作品区分']!==work)return false;const blob=keys.map(k=>normalize(r[k])).join(' ');return terms.every(t=>blob.includes(t))});state.matches.sort(compare)}
+function compare(a,b){const av=text(a[state.sort]),bv=text(b[state.sort]);if(!av!==!bv)return av? -1:1;let result;if(state.sort==='ページ'||state.sort==='話数'){const num=s=>{const m=s.match(/\d+/);return m?Number(m[0]):NaN},na=num(av),nb=num(bv);result=!Number.isNaN(na)&&!Number.isNaN(nb)?na-nb:av.localeCompare(bv,'ja',{numeric:true})}else result=av.localeCompare(bv,'ja',{numeric:true});return (state.asc?result:-result)||(a._order-b._order)}
+function highlight(td,value,field){if(!value){td.textContent='—';td.classList.add('blank');return}const selected=$('field').value,terms=normalize($('keyword').value).split(/[\s　]+/).filter(Boolean);if(!terms.length||(selected!=='ALL'&&selected!==field)){td.textContent=value;return}const escaped=terms.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));const re=new RegExp('('+escaped.join('|')+')','ig');let last=0;for(const match of value.matchAll(re)){const i=match.index;if(i<last)continue;td.append(document.createTextNode(value.slice(last,i)));const m=document.createElement('mark');m.textContent=match[0];td.append(m);last=i+match[0].length}td.append(document.createTextNode(value.slice(last)))}
+function drawHeader(){const tr=$('thead');tr.replaceChildren();FIELDS.forEach(key=>{const th=document.createElement('th');th.tabIndex=0;th.title='クリックして並べ替え';th.setAttribute('aria-sort',state.sort===key?(state.asc?'ascending':'descending'):'none');th.append(document.createTextNode(key));const sort=document.createElement('span');sort.className='sort '+(state.sort===key?'active-sort':'');sort.textContent=state.sort===key?(state.asc?'▲':'▼'):'↕';th.append(sort);th.addEventListener('click',()=>sortBy(key));th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sortBy(key)}});tr.append(th)})}
+function drawRows(){const target=$('tbody');target.replaceChildren();if(!state.rows.length){target.append(emptyRow('データを読み込んでいません。'));$('more').hidden=true;return}if(!state.matches.length){target.append(emptyRow('検索条件に一致する項目はありません。'));$('more').hidden=true;return}const frag=document.createDocumentFragment();for(const r of state.matches.slice(0,state.count)){const tr=document.createElement('tr');FIELDS.forEach(key=>{const td=document.createElement('td');highlight(td,r[key],key);tr.append(td)});frag.append(tr)}target.append(frag);$('more').hidden=state.matches.length<=state.count;$('more').textContent='さらに表示（'+nfmt(Math.min(100,state.matches.length-state.count))+'件）'}
+function refresh(){if(!state.rows.length)return;search();$('hit').textContent=nfmt(state.matches.length);$('total').textContent='/ '+nfmt(state.rows.length)+' 件';drawHeader();drawRows()}
+function sortBy(key){if(state.sort===key)state.asc=!state.asc;else{state.sort=key;state.asc=true}refresh()}
+for(const id of ['keyword','field','category','work'])$(id).addEventListener(id==='keyword'?'input':'change',()=>{state.count=100;refresh()});
+$('reset').addEventListener('click',()=>{$('keyword').value='';$('field').value='ALL';$('category').value='';$('work').value='';state.count=100;refresh()});
+$('more').addEventListener('click',()=>{state.count+=100;drawRows()});
+$('chooseFile').addEventListener('click',()=>$('fileInput').click());
+$('fileInput').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{setStatus('読み込み中：'+file.name,'');const buf=await file.arrayBuffer(),data=file.name.toLowerCase().endsWith('.xlsx')?await readXlsx(buf):readCsv(buf);initializeRows(data.rows,file.name)}catch(err){showManual('読み込みに失敗しました：'+err.message)}finally{e.target.value=''}});
+async function autoLoad(){
+  // Chrome / Edge は file:// での fetch(CSV/XLSX) を禁止するため、JS版を優先。
+  if(location.protocol==='file:'){
+    try{if(autoPack){initializeRows(usePack(autoPack),'目次データ.js（ローカル用）');return}}catch(err){showManual('ローカル用データの読み込みに失敗しました：'+err.message);return}
+    showManual('同じフォルダに「目次データ.js」がありません。付属の起動バッチで生成するか、Excel / CSVを手動指定してください。');return
+  }
+  const problems=[];
+  for(const filename of AUTO_FILES){
+    try{const response=await fetch('./'+encodeURIComponent(filename),{cache:'no-store'});if(response.status===404)continue;if(!response.ok)throw Error('HTTP '+response.status);const buffer=await response.arrayBuffer();const data=filename.endsWith('.xlsx')?await readXlsx(buffer):readCsv(buffer);initializeRows(data.rows,filename);return}
+    catch(err){problems.push(filename+'：'+err.message)}
+  }
+  try{if(autoPack){initializeRows(usePack(autoPack),'目次データ.js（予備）');return}}catch(err){problems.push('目次データ.js：'+err.message)}
+  showManual('「目次データ.csv」「目次データ.xlsx」「目次データ.js」が見つからないか、読み込めません。'+(problems.length?'\n'+problems.join('\n'):'')+'\nExcel / CSVを選択してください。');
+}
+drawHeader();autoLoad();
+</script>
+</body>
+</html>
